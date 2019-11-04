@@ -1,0 +1,96 @@
+// sample hql scripts///
+$ vi create_NTE_FACT.hql
+OP TABLE IF EXISTS ${hiveconf:SC_TEST}.NTE_FACT;
+
+CREATE TABLE IF NOT EXISTS ${hiveconf:SC_TEST}.NTE_FACT
+(
+        pid     string,
+        organization_id string,
+        organization_code       string,
+        qtr_start_date  string,
+        qtr_end_date    string,
+        prev_item_cost  string,
+        asp     string,
+        list_price      string,
+        volume  string,
+        spend   string,
+        spend_savings   string,
+        revenue string,
+        margin  string,
+        fiscal_period   string,
+        inventory_item_id       string,
+        cost_type_id    string,
+        cost_type       string,
+        item_cost       string,
+        df_fee  string,
+        assembly_cost   string,
+        test_cost       string,
+        nte     string,
+        cost_target     string
+)
+ROW FORMAT SERDE
+        'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+STORED AS INPUTFORMAT
+        'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+OUTPUTFORMAT
+        'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+TBLPROPERTIES
+(
+  'COLUMN_STATS_ACCURATE'='false',
+  'numFiles'='0',
+  'numRows'='-1',
+  'rawDataSize'='-1',
+  'serialization.null.format'='null',
+  'totalSize'='0'
+);  
+
+// insert records....//
+
+SET mapreduce.reduce.memory.mb=8000;
+SET mapreduce.map.memory.mb=8000;
+SET mapred.reduce.child.java.opts=-Xmx8000m;
+SET mapred.map.child.java.opts=-Xmx8000m;
+SET hive.auto.convert.join = false;
+
+
+INSERT OVERWRITE TABLE ${hiveconf:SC_TEST}.NTE_FACT
+SELECT
+        SPEND_SAVINGS.PID
+        ,SPEND_SAVINGS.ORGANIZATION_ID
+        ,SPEND_SAVINGS.ORGANIZATION_CODE
+        ,SPEND_SAVINGS.QTR_START_DATE
+        ,SPEND_SAVINGS.QTR_END_DATE
+        ,SPEND_SAVINGS.PREV_ITEM_COST
+        ,SPEND_SAVINGS.ASP
+        ,SPEND_SAVINGS.LIST_PRICE
+        ,SPEND_SAVINGS.VOLUME
+        ,SPEND_SAVINGS.SPEND
+        ,SPEND_SAVINGS.SPEND_SAVINGS
+        ,SPEND_SAVINGS.REVENUE
+        ,SPEND_SAVINGS.MARGIN
+        ,SPEND_SAVINGS.FISCAL_PERIOD
+        ,ITEM_MEASURES.INVENTORY_ITEM_ID
+        ,ITEM_MEASURES.COST_TYPE_ID
+        ,ITEM_MEASURES.COST_TYPE
+        ,ITEM_MEASURES.ITEM_COST
+        ,ITEM_MEASURES.DF_FEE
+        ,ITEM_MEASURES.ASSEMBLY_COST
+        ,ITEM_MEASURES.TEST_COST
+        ,ITEM_MEASURES.NTE
+        ,ITEM_MEASURES.COST_TARGET
+        --,MTL.PID
+        --,MTL.ORDERBILITY_DATE
+        --,MTL.ORDERBILITY_STATUS
+        ,MTL.CUSTOMER_ORDER_FLAG
+FROM
+
+                ${hiveconf:SC_PROD}.SRC_PID_SPEND_SAVINGS SPEND_SAVINGS
+        JOIN
+                ${hiveconf:SC_READ}.MTL_SYSTEM_ITEMS_B MTL
+        ON
+                SPEND_SAVINGS.PID=MTL.SEGMENT1
+        JOIN
+                ${hiveconf:SC_PRD}.ITEM_MEASURES ITEM_MEASURES
+        ON
+                SPEND_SAVINGS.PID=ITEM_MEASURES.INVENTORY_ITEM_ID
+;
